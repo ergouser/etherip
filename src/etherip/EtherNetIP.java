@@ -44,6 +44,7 @@ import etherip.protocol.ListServices;
 import etherip.protocol.ListServicesProtocol.Service;
 import etherip.protocol.MRChipReadProtocol;
 import etherip.protocol.MRChipWriteProtocol;
+import etherip.protocol.MRFragmentWriteProtocol;
 import etherip.protocol.MessageRouterProtocol;
 import etherip.protocol.Protocol;
 import etherip.protocol.ProtocolAdapter;
@@ -555,17 +556,22 @@ public class EtherNetIP implements AutoCloseable
 	 *  @param value Value to write
 	 *  @throws Exception on error
 	 */
-	public void writeTag(final String tag, final CIPData value) throws Exception
-	{
-	    final MRChipWriteProtocol cip_write = new MRChipWriteProtocol(tag, value);
+	public void writeTag(final String tag, final CIPData value) throws Exception {
+	  final MessageRouterProtocol cip_write;
 
-	    final Encapsulation encap =
-	            new Encapsulation(SendRRData, this.connection.getSession(),
-                    new SendRRDataProtocol(
-	                    new UnconnectedSendProtocol(this.slot,
-	                            cip_write)));
-        this.connection.execute(encap);
-    }
+	  if ( value.getType().ordinal() >=  CIPData.Type.STRUCT.ordinal()) {
+	    cip_write = new MRFragmentWriteProtocol(tag, value);
+	  } else {
+	    cip_write = new MRChipWriteProtocol(tag, value);
+	  }
+
+	  final Encapsulation encap =
+	      new Encapsulation(SendRRData, this.connection.getSession(),
+	          new SendRRDataProtocol(
+	              new UnconnectedSendProtocol(this.slot,
+	                  cip_write)));
+	  this.connection.execute(encap);
+	}
 
 	/** Write multiple tags in one network transaction
 	 *  @param tags Tag names to write

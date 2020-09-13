@@ -187,22 +187,22 @@ final public class CIPData {
       for ( String value : values ) {
         int stringLength = value.getBytes("UTF-8").length;
         totalStringLength += stringLength + 4;
-        if ( stringLength % 2 != 0 ) {
-          totalStringLength++;  // odd length strings must be padded.
-        }
+        //if ( stringLength % 2 != 0 ) {
+        //  totalStringLength++;  // odd length strings must be padded.
+        //}
       }
       data = ByteBuffer.allocate(totalStringLength); // the length is encoded in 4 bytes
       this.data.order(Connection.BYTE_ORDER);
       for ( String value : values ) {
         int stringLength = value.getBytes("UTF-8").length;
-        if ( stringLength %2 != 0 ) {
-          stringLength++;
-        }
+       // if ( stringLength %2 != 0 ) {
+        //  stringLength++;
+        //}
         data.putInt(stringLength);
         data.put(value.getBytes("UTF-8"));  //UTF-8 support
-        if ( stringLength % 2 != 0 ) {
-          data.put((byte)0);
-        }
+       // if ( stringLength % 2 != 0 ) {
+        //  data.put((byte)0);
+       // }
       }
       elements = (short)values.length;
       this.type = Type.STRUCT;
