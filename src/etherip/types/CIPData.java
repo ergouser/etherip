@@ -106,7 +106,7 @@ final public class CIPData {
 
   /** The Identity. Primarily the vendor id. */
   protected Identity identity;
-  
+
   /** The encoded type for a structure (null for non-structure types). */
   private Type encodedStructureType;
 
@@ -195,6 +195,9 @@ final public class CIPData {
       this.data.order(Connection.BYTE_ORDER);
       for ( String value : values ) {
         int stringLength = value.getBytes("UTF-8").length;
+        if ( stringLength %2 != 0 ) {
+          stringLength++;
+        }
         data.putInt(stringLength);
         data.put(value.getBytes("UTF-8"));  //UTF-8 support
         if ( stringLength % 2 != 0 ) {
@@ -202,6 +205,7 @@ final public class CIPData {
         }
       }
       elements = (short)values.length;
+      this.type = Type.STRUCT;
     } else if ( type == Type.OMRON_STRING ) {
       if ( values.length != 1 ) {
         // don't know how to handle arrays - it's not clear the the NJ/NX PLCs support it
@@ -215,10 +219,10 @@ final public class CIPData {
       data.putShort(stringLength);
       data.put(values[0].getBytes("UTF-8"));
       elements = 1;
+      this.type = Type.OMRON_STRING;
     } else {
       throw new Exception("Type " + type + " not handled");
     }
-    this.type = Type.STRUCT;
   }
 
   /**
@@ -270,7 +274,10 @@ final public class CIPData {
       case LREAL:
         return (short) (this.data.capacity() / this.type.element_size);
       case BITS:
-        return 1;  // there's no way to know the size of a bit array.  Assume and return 1 unless told otherwise.
+        // if you ask for a Bool array, you get back the correct number of bits
+        // that is, if the Bool array is 32, you get back 32 bits.  I don't know what happens if the array is 31
+        return (short)(this.data.capacity() *8);
+        //return 1;  // there's no way to know the size of a bit array.  Assume and return 1 unless told otherwise.
       case OMRON_STRING: {
         return 1; // single element
       }
@@ -305,7 +312,7 @@ final public class CIPData {
           // Counter cc 00 00 00 a0 02 82 0f 00 00 00 80 0c 00 00 00 50 00 00 00
           // (Pre is 12 0c 00 00 00- byte13-17 - and ACC is 80 - byte17 0x50 this is a 32 bit value (DINT) 50 00 00 00
           // byte before PRE is the status byte.)
-          
+
           // PRE is bytes 6-9 of the data.hb
           // ACC is bytes 10-13
 
@@ -564,6 +571,9 @@ final public class CIPData {
       case REAL:
         this.data.putFloat(this.type.element_size * index, value.floatValue());
         break;
+      case LREAL:
+        this.data.putDouble(this.type.element_size * index, value.doubleValue());
+        break;
       default:
         throw new Exception("Cannot set type " + this.type + " to a number");
     }
@@ -636,13 +646,31 @@ final public class CIPData {
       buf.put(data.array());
     } else {
       buf.putShort(Type.STRUCT.code);
-      buf.putShort(encodedStructureType.code);  // not sure what other structures work beside STRUCT_STRING
-      buf.putShort(elements);
-      //buf.putInt(0);
-      buf.putShort((short)0);  // int?
-      buf.put(data.array());
+      this.data.clear();
+      Type.forCode(this.data.getShort());
+      buf.putShort((short)encodedStructureType.code);  // not sure what other structures work beside STRUCT_STRING
+      // The data buffer contains the string as _read_:
+      // STRUCT, STRUCT_STRING, length, chars.
+      // It needs to be written as
+      // STRUCT, STRUCT_STRING, _elements_, length, chars.
+      buf.putShort(this.elements);
+      buf.putInt(0);
+      //buf.putShort((short)0);  
+      // Copy length, chars from data into buf
+      buf.put(this.data.array());
     }
 
+    //STRUCT(0x02A0, 0),
+    //STRUCT_STRING(0x0FCE, 0), 
+    //          CE 0F - ................
+    //          0030 - 0A 00 00 00 33 31 33 31 33 31 33 31 33 31 00 00 - ....3131313131..
+
+    //    buf.putShort(Type.STRUCT.code);
+    //    buf.putShort(encodedStructureType.code);  // not sure what other structures work beside STRUCT_STRING
+    //    buf.putShort(elements);
+    //    //buf.putInt(0);
+    //    buf.putShort((short)0);  // int?
+    //    buf.put(data.array());
 
     //    buf.putShort(this.type.code);
     //    // STRUCT already contains structure detail, elements etc.
@@ -665,7 +693,15 @@ final public class CIPData {
     //      buf.putShort(this.elements);
     //      buf.put(this.data.array());
     //    }
+
+    //    buf.putShort(Type.STRUCT.code);
+    //    buf.putShort(type.code);
+    //    buf.putShort(elements);
+    //    buf.putInt(0);
+    //    buf.put(data.array());
+
   }
+
 
   /** @return String representation for debugging */
   @Override
@@ -735,9 +771,12 @@ final public class CIPData {
         break;
       }
       case BITS: {
-        final int[] values = new int[elements%(type.element_size*8)+1];
-        for (int i = 0; i < elements; ++i) {
-          values[i] = buf.getInt();
+        final int[] values = new int[elements]; // new int[elements%(type.element_size*8)+1];
+        for (int i = 0; i < elements/8; ++i) {
+          byte value = buf.get();
+          for ( int bitposn = 0 ; bitposn < 8 ; bitposn++ ) {
+            values[i + bitposn] = (value >> bitposn)  & 0x1;
+          }
         }
         result.append(Arrays.toString(values));
         break;
