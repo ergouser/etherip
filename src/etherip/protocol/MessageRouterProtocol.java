@@ -9,6 +9,7 @@ package etherip.protocol;
 
 import java.nio.ByteBuffer;
 
+import etherip.EtherNetIP;
 import etherip.data.CipException;
 import etherip.types.CNPath;
 import etherip.types.CNService;
@@ -20,6 +21,8 @@ import etherip.types.CNService;
  */
 public class MessageRouterProtocol extends ProtocolAdapter
 {
+  
+  
     final private CNService service;
 
     final private CNPath path;
@@ -140,11 +143,23 @@ public class MessageRouterProtocol extends ProtocolAdapter
             else {
 	            if (ext_status_size > 0)
 	            {
-	                throw new CipException(this.status, this.ext_status[0]);
+	              CipException cipException = new CipException(this.status, this.ext_status[0]);
+	              if ( EtherNetIP.throwOnReadError ) {
+	                throw cipException;
+	              } else {
+	                // use the EIP logger and log the message - TODO add which tag failed.
+	                EtherNetIP.logger.severe(cipException.getLocalizedMessage());
+	              }
 	            }
 	            else
 	            {
-	                throw new CipException(this.status, 0);
+	              CipException cipException = new CipException(this.status, 0);
+	              if ( EtherNetIP.throwOnReadError ) {
+	                throw cipException;
+	              } else {
+	                // use the EIP logger and log the message - TODO add which tag failed.
+	                EtherNetIP.logger.severe(cipException.getLocalizedMessage());
+	              }
 	            }
             }
         }

@@ -72,7 +72,13 @@ public class EtherNetIP implements AutoCloseable
 
 	private static final int MAX_REQUEST_SIZE = 450;
 
-    final private String address;
+  /** Avoid throwing on every error. A user reading 100 tags may (is quite likely) to have an error in one of the tags.  If this
+   * flag is true, the "decode" method will throw and no values will be read.  If this value is false tags that read correctly
+   * will be returned as normal.  Missing tag will not be decoded "readTags" in EtherNetIP will return an array with null entries. 
+   */
+  public static boolean throwOnReadError = true;
+
+  final private String address;
     final private int slot;
     private Connection connection = null;
 

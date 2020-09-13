@@ -12,6 +12,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 
 import etherip.util.Hexdump;
@@ -99,11 +100,15 @@ public class TcpConnection extends Connection
     {
         // Read until protocol has enough data to decode
         this.buffer.clear();
+        Integer result;
+        // From AsynchronousSocketChannel::read -  The result passed to the completion handler is the number of bytes read or -1 if no bytes could be read because the channel has reached end-of-stream. 
+        // Unless the return is checked, this will loop forever.  This happens, for example, when the request is made for a non-existant tag (at least on NX/NJ PLCs).
+        // 
         do
         {
-            this.channel.read(this.buffer).get(this.timeout_ms, MILLISECONDS);
+          result = this.channel.read(this.buffer).get(this.timeout_ms, MILLISECONDS);
         }
-        while (this.buffer.position() < decoder.getResponseSize(this.buffer));
+        while (this.buffer.position() < decoder.getResponseSize(this.buffer) && result != -1);
 
         // Prepare to decode
         this.buffer.flip();

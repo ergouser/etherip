@@ -29,6 +29,30 @@ import java.util.Arrays;
  */
 public class Identity
 {
+  /** Vendor ID for Omron */
+  public static final short VENDOR_OMRON = 0x2F;
+  
+  /** Vendor ID for AB/Rockwell */  // empirically from ControlLogix - Device vendor=0x1, device_type=0xC, revision=0x302, serial=0xA59D, name='1756-ENBT/A'
+  public static final short VENDOR_AB = 0x01;
+  
+  /** The "default" Identity.  This is set to a dummy, default, AB version and will be updated to match the Identity last created 
+   * (presumably the last read from the PLC).  This maintains backwards compatibility and will also allow an existing codebase to 
+   * connect to an Omron NX/NJ PLC without changes.
+   */
+  // this may never be null
+  public static Identity LAST_DEVICE_INFO_FROM_PLC;
+  
+  /** Create a default identity. */
+  static {
+    LAST_DEVICE_INFO_FROM_PLC = new Identity();
+    LAST_DEVICE_INFO_FROM_PLC.setVendorId(VENDOR_AB);
+    LAST_DEVICE_INFO_FROM_PLC.setProductCode((short)0xFF);
+    LAST_DEVICE_INFO_FROM_PLC.setRevision(new Integer[] {0xFF});
+    LAST_DEVICE_INFO_FROM_PLC.setSerialNumber("Compatibility");
+    LAST_DEVICE_INFO_FROM_PLC.setStatus("0");
+    LAST_DEVICE_INFO_FROM_PLC.setProductName("ABCompatibilityDevice");
+  }
+
     private Integer vendorId, deviceType, productCode;
 
     private Integer[] revision;
@@ -44,6 +68,7 @@ public class Identity
         this.status = null;
         this.serialNumber = null;
         this.productName = null;
+        LAST_DEVICE_INFO_FROM_PLC = this;
     }
 
     public int getVendorId()
@@ -129,7 +154,7 @@ public class Identity
     @Override
     public String toString()
     {
-        return "Identity [vendorId=" + this.vendorId + ", deviceType="
+        return "Identity [vendorId=" + Integer.toHexString(this.vendorId) + ", deviceType="
                 + this.deviceType + ", productCode=" + this.productCode
                 + ", revision=" + Arrays.toString(this.revision)
                 + ", productName=" + this.productName + ", serialNumber="
