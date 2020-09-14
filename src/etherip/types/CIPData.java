@@ -812,8 +812,16 @@ final public class CIPData {
       case STRUCT: {
         final short code = buf.getShort();
         final Type el_type;
+        // there should be a better way to distinguish between an instance created by the user (which will not have the valid code)
+        // and an instance created from  the PLC.
+        // code will be invalid if the instance was created by the user.
         try {
-          el_type = Type.forCode(code);
+          if ( Type.forCode(code) == null ) {
+            el_type = encodedStructureType;
+            buf.clear();
+          } else {
+            el_type = Type.forCode(code);
+          }
         } catch (final Exception ex) {
           result.append("Structure element with type code 0x" + Integer.toHexString(code));
           break;

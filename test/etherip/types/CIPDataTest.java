@@ -108,9 +108,10 @@ public class CIPDataTest {
 
     final CIPData abData = new CIPData(CIPData.Type.STRUCT_STRING, "RockwellString");
 
-    assertThat(CIPData.Type.STRUCT_STRING, equalTo(abData.getType()));
-    assertThat(1, equalTo(abData.getElementCount())); //
-    assertThat(abData.toString(), equalTo("CIP_STRUCT_STRING (0x0FCE): STRUCT_STRING (0x0FCE) 'RockwellString', len 14"));
+    assertThat(CIPData.Type.STRUCT, equalTo(abData.getType()));
+
+    assertThat(1, equalTo(abData.getElementCount()));
+    assertThat(abData.toString(), equalTo("CIP_STRUCT (0x02A0): STRUCT_STRING (0x0FCE) 'RockwellString', len 14"));
 
     assertThat(false, equalTo(abData.isNumeric()));
     // getString is not symetric with constructor - assertThat("RockwellString", equalTo(abData.getString()));
