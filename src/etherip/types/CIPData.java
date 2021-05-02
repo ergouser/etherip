@@ -259,9 +259,14 @@ final public class CIPData {
       case BOOL:
         int elementSize = type.element_size;
         if (identity.getVendorId() == Identity.VENDOR_OMRON) {
-          elementSize = 2;
+          // on OMRON if you read the array (get ALIDBoolArray rather than an element, eg ALIDBoolArray[3]) you get back the entire array
+          // packed into bytes.  A 128 byte array will return 16 bytes.
+          // The element count is therefore the size (capacity) of the data
+          return (short)(data.capacity()*8);  // will be expanded to bits later...
+          //elementSize = 2;
         }
-        return (short) (data.capacity() / elementSize);
+        //return (short) (data.capacity() / elementSize);
+        return (short)(data.capacity()*8);  // will be expanded to bits later...
       case SINT:
       case INT:
       case DINT:
@@ -372,7 +377,6 @@ final public class CIPData {
    */
   final synchronized public Number getNumber(final int index) throws Exception, IndexOutOfBoundsException {
     switch (this.type) {
-      case BOOL:
       case SINT:
         return new Byte(this.data.get(this.type.element_size * index));
       case USINT:
@@ -388,10 +392,13 @@ final public class CIPData {
       case LINT:
       case ULINT:  // this is handles as signed.  
         return new Long(data.getLong(type.element_size * index));
+      case BOOL:
       case BITS: {
         // bits are packed into a byte
-        int unpacked = data.getInt(index/(type.element_size*8));
-        int bits = (byte)(unpacked>>(index%(type.element_size*8)));
+        // - as ints, seems to have problems...  int unpacked = data.getInt(index/(type.element_size*8));
+        //  int bits = (byte)((unpacked>>(index%(type.element_size*8))) & 1);
+        int unpacked = data.get(index/(8));  // as bytes
+        int bits = (byte)((unpacked>>(index%(8))) & 1);
         return new Integer(bits);
       }
       //return new Integer(this.data.getInt(this.type.element_size * index));
@@ -712,14 +719,15 @@ final public class CIPData {
     buf.order(this.data.order());
     buf.clear();
     switch (this.type) {
-      case BOOL: {
-        final String[] values = new String[elements];
-        for (int i = 0; i < elements; ++i) {
-          values[i] = buf.get() != 0 ? "TRUE" : "FALSE";
-        }
-        result.append(Arrays.toString(values));
-        break;
-      }
+//      case BOOL: {
+//        //final String[] values = new String[elements];
+//        final byte[] values = new byte[this.elements];
+//        for (int i = 0; i < elements; ++i) {
+//          values[i] = (byte)buf.get();// != 0 ? "TRUE" : "FALSE";
+//        }
+//        result.append(Arrays.toString(values));
+//        break;
+//      }
       case SINT: {
         final byte[] values = new byte[this.elements];
         buf.get(values);
@@ -770,6 +778,7 @@ final public class CIPData {
         result.append(Arrays.toString(values));
         break;
       }
+      case BOOL:
       case BITS: {
         final int[] values = new int[elements]; // new int[elements%(type.element_size*8)+1];
         for (int i = 0; i < elements/8; ++i) {

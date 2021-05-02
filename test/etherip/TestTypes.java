@@ -59,6 +59,7 @@ public class TestTypes {
           // If the read succeeds, change the value and write using the type from the read.  Read again and compare.
 
           CIPData value = plc.readTag(tag);
+          System.out.println ("Value: " + value.getNumber(0));
           if ( value != null ) {
             switch ( value.getType()) {
               case BOOL:{
